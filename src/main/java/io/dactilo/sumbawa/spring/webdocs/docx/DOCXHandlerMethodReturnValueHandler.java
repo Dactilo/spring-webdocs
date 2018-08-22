@@ -20,7 +20,7 @@ public class DOCXHandlerMethodReturnValueHandler extends AbstractHttpMessageConv
 
     public void htmlToWord(OutputStream outputStream, String html) throws Docx4JException, IOException {
         final WordprocessingMLPackage wordMLPackage = WordprocessingMLPackage.createPackage();
-
+        wordMLPackage.getMainDocumentPart().getStyleDefinitionsPart(true);
         final XHTMLImporterImpl xhtmlImporter = new XHTMLImporterImpl(wordMLPackage);
 
         wordMLPackage.getMainDocumentPart().getContent()
