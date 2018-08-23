@@ -1,6 +1,7 @@
 package io.dactilo.sumbawa.spring.webdocs.docx;
 
 import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
+import org.docx4j.jaxb.Context;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.springframework.http.HttpInputMessage;
@@ -19,8 +20,11 @@ public class DOCXHandlerMethodReturnValueHandler extends AbstractHttpMessageConv
     }
 
     public void htmlToWord(OutputStream outputStream, String html) throws Docx4JException, IOException {
+        if(Context.jc == null) {
+            //Context.jc;
+        }
+
         final WordprocessingMLPackage wordMLPackage = WordprocessingMLPackage.createPackage();
-        wordMLPackage.getMainDocumentPart().getStyleDefinitionsPart(true);
         final XHTMLImporterImpl xhtmlImporter = new XHTMLImporterImpl(wordMLPackage);
 
         wordMLPackage.getMainDocumentPart().getContent()

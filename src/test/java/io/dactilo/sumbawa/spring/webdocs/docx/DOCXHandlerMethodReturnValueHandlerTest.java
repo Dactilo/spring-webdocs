@@ -1,16 +1,70 @@
 package io.dactilo.sumbawa.spring.webdocs.docx;
 
 import org.docx4j.openpackaging.exceptions.Docx4JException;
+import org.junit.Before;
 import org.junit.Test;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.FileSystemResourceLoader;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockServletContext;
+import org.springframework.stereotype.Controller;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
+import javax.servlet.ServletContext;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 
-import static org.junit.Assert.*;
+import static org.hamcrest.core.IsNot.not;
+import static org.junit.Assert.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 public class DOCXHandlerMethodReturnValueHandlerTest {
     private final DOCXHandlerMethodReturnValueHandler docxHandlerMethodReturnValueHandler = new DOCXHandlerMethodReturnValueHandler();
+
+    private MockMvc mockMvc;
+
+    private static ServletContext servletContext() {
+        return new MockServletContext("/", new FileSystemResourceLoader());
+    }
+
+    @Before
+    public void setUp() {
+        try (AnnotationConfigWebApplicationContext configurableWebApplicationContext = new AnnotationConfigWebApplicationContext()) {
+            configurableWebApplicationContext.setServletContext(servletContext());
+            configurableWebApplicationContext.register(SampleDOCXConfiguration.class);
+            configurableWebApplicationContext.refresh();
+
+
+            mockMvc = MockMvcBuilders.webAppContextSetup(configurableWebApplicationContext)
+                    .build();
+        }
+    }
+
+    @Test
+    public void testSampleController_htmlWorks() throws Exception {
+        mockMvc.perform(get("/html"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "text/html;charset=utf-8"))
+                .andExpect(content().string("<b>test</b>"));
+    }
+
+    @Test
+    public void testSampleController_pdfWorks() throws Exception {
+        mockMvc.perform(get("/docx"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document;charset=utf-8"))
+                .andExpect(content().string(not("<b>test</b>")));
+    }
 
     @Test
     public void testHtmlToWord_Sample() throws IOException, Docx4JException {
@@ -224,5 +278,31 @@ public class DOCXHandlerMethodReturnValueHandlerTest {
 
         byte[] results = outputStream.toByteArray();
         assertTrue(results.length > 0);
+    }
+}
+
+@Configuration
+@EnableWebMvc
+@EnableWordFormatter
+class SampleDOCXConfiguration extends WebMvcConfigurerAdapter {
+    @Bean
+    public SampleController sampleController() {
+        return new SampleController();
+    }
+}
+
+
+@Controller
+@RequestMapping("/")
+@ResponseStatus(HttpStatus.OK)
+class SampleController {
+    @RequestMapping(value = "html", method = RequestMethod.GET, produces = "text/html;charset=utf-8")
+    public ResponseEntity<String> html() {
+        return new ResponseEntity<>("<b>test</b>", HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "docx", method = RequestMethod.GET, produces = "application/vnd.openxmlformats-officedocument.wordprocessingml.document;charset=utf-8")
+    public ResponseEntity<String> docx() {
+        return new ResponseEntity<>("<b>test</b>", HttpStatus.OK);
     }
 }
